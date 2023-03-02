@@ -1,0 +1,27 @@
+{
+  "name": "ew-sdk",
+  "version": "1.0.0",
+  "description": "sdk for express waas",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Express-WaaS/ew-sdk-node.git"
+  },
+  "keywords": [
+    "sdk",
+    "ew"
+  ],
+  "author": "hrishikesh",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Express-WaaS/ew-sdk-node/issues"
+  },
+  "homepage": "https://github.com/Express-WaaS/ew-sdk-node#readme",
+  "dependencies": {
+    "socket.io-client": "^4.6.1"
+  }
+}
