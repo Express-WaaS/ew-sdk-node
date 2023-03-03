@@ -7,7 +7,7 @@ export default class EWServer {
 	 *
 	 * @returns {EWServer}
 	 */
-	constructor({ encryption } = { encryption: "AUTO" }) {
+	constructor({ encryption } = { encryption: "NONE" }) {
 		this.url = configs.ew_url
 
 		this.socket = null
@@ -27,12 +27,11 @@ export default class EWServer {
 
 		return this
 	}
-	connect(name, token) {
+
+	connect(token) {
 		this.socket = new io(this.url, {
 			query: {
 				type: "SERVER",
-				namespace: name,
-				name,
 				keys: JSON.stringify({ pub: this.keys.publicKey }),
 			},
 			auth: {
