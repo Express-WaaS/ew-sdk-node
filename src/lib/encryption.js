@@ -1,48 +1,75 @@
-import crypto from "crypto"
+import crypto from 'crypto'
 
 export default class Encryption {
-	static generateKeyPair() {
-		let key = crypto.generateKeyPairSync("rsa", {
-			modulusLength: 2048,
-			publicKeyEncoding: {
-				type: "spki",
-				format: "pem",
-			},
-			privateKeyEncoding: {
-				type: "pkcs8",
-				format: "pem",
-			},
-		})
+    static generateKeyPair() {
+        let key = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 1024,
+            publicKeyEncoding: {
+                type: 'spki',
+                format: 'pem',
+            },
+            privateKeyEncoding: {
+                type: 'pkcs8',
+                format: 'pem',
+            },
+        })
 
-		return {
-			publicKey: key.publicKey,
-			privateKey: key.privateKey,
-		}
-	}
+        return {
+            publicKey: key.publicKey,
+            privateKey: key.privateKey,
+        }
+    }
 
-	static encrypt(data, publicKey) {
-		return crypto
-			.publicEncrypt(
-				{
-					key: publicKey,
-					padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-					oaepHash: "sha256",
-				},
-				Buffer.from(JSON.stringify(data))
-			)
-			.toString("base64")
-	}
+    static encrypt(data, publicKey, do_encryption) {
+        data = JSON.stringify(data)
+        const aes_keys = {
+            key: crypto.randomBytes(16).toString('hex'),
+            init: crypto.randomBytes(8).toString('hex'),
+        }
 
-	static decrypt(data, privateKey) {
-		return JSON.parse(
-			crypto.privateDecrypt(
-				{
-					key: this.keys.privateKey,
-					padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-					oaepHash: "sha256",
-				},
-				Buffer.from(data, "base64")
-			)
-		)
-	}
+        const cipherer = crypto.createCipheriv(
+            'aes-256-cbc',
+            aes_keys.key,
+            aes_keys.init
+        )
+
+        if (!do_encryption) return data
+
+        let encrypted = cipherer.update(data, 'utf8', 'base64')
+        encrypted += cipherer.final('base64')
+
+        const encrypted_aes_keys = crypto
+            .publicEncrypt(publicKey, Buffer.from(JSON.stringify(aes_keys)))
+            .toString('base64')
+
+        return JSON.stringify({
+            encrypted_aes_keys: encrypted_aes_keys,
+            encrypted,
+        })
+    }
+
+    static decrypt(data, privateKey, do_encryption) {
+        data = JSON.parse(data)
+        if (!do_encryption) return data
+
+        const aes_keys = JSON.parse(
+            crypto
+                .privateDecrypt(
+                    privateKey,
+                    Buffer.from(data.encrypted_aes_keys, 'base64')
+                )
+                .toString('utf8')
+        )
+
+        const decipherer = crypto.createDecipheriv(
+            'aes-256-cbc',
+            aes_keys.key,
+            aes_keys.init
+        )
+
+        let decrypted = decipherer.update(data.encrypted, 'base64', 'utf8')
+        decrypted += decipherer.final('utf8')
+
+        return JSON.parse(decrypted)
+    }
 }
