@@ -8,7 +8,7 @@ export default {
         },
         {
             ew_url: 'http://localhost:5000',
-            httpOverWsTimeout: 15000,
+            httpOverWsTimeout: 10000,
         },
     ][selector],
 }

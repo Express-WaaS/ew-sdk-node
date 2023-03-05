@@ -92,7 +92,9 @@ export default class EWServer {
                     message: 'fetching cloud settings',
                 })
 
-                this.cloudSettings = await this.http.request()('cloud_settings')
+                this.cloudSettings = await this.http.request()(
+                    'cloud_settings__no_auto'
+                )
 
                 this.do_encryption = this.cloudSettings.options.encryption
 

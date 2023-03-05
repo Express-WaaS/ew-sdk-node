@@ -8,6 +8,10 @@ export default io => ({
     request:
         for_id =>
         (path, ...params) => {
+            path = path.split('__')
+            let no_auto = path[1] === 'no_auto' ?? false
+            path = path[0]
+
             if (!io && !io.connected)
                 return new Error('HttpOverWs: No socket connection')
 
@@ -16,6 +20,9 @@ export default io => ({
             let eventName = `request__${path}`
             if (for_id) {
                 eventName += `__${for_id}`
+            }
+            if (no_auto) {
+                eventName += '__no_auto'
             }
 
             io.emit(eventName, ...params)
@@ -36,6 +43,7 @@ export default io => ({
                     if (event.startsWith('response__')) {
                         const _parts = event.split('__')
                         const _path = _parts[1]
+
                         if (_path === path) {
                             HOWLogger.log({
                                 type: 'Response Received',
@@ -43,6 +51,7 @@ export default io => ({
                                 params,
                                 for_id,
                                 data,
+                                event,
                             })
                             resolve(...data)
                         }

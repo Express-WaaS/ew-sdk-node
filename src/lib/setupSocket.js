@@ -1,4 +1,5 @@
 import Encryption from './encryption.js'
+import keySharingAlgorithm from './keySharingAlgorithm.js'
 
 export default {
     basic: (_this, EWLogger) => {
@@ -22,50 +23,34 @@ export default {
                 client_socket_id,
             })
 
-            try {
-                let pubClient = await _this.http.request()(
-                    'client_public_key',
-                    {
-                        id: client_socket_id,
-                    }
-                )
-                pubClient = JSON.parse(pubClient)
-
-                const encryptedBroadcastKeys = Encryption.encrypt(
-                    _this.broadcast_keys,
-                    pubClient.publicKey,
-                    _this.do_encryption
-                )
-                const sendBroadcastKeys = await _this.http.request(
-                    client_socket_id
-                )('client_broadcast_keys', { encryptedBroadcastKeys })
-
-                return sendBroadcastKeys
-            } catch (e) {
-                EWLogger.error({
-                    message: 'error sending broadcast keys to client',
-                    error: e,
-                })
-            }
+            keySharingAlgorithm(
+                _this,
+                client_socket_id,
+                _this.broadcast_keys,
+                'client_broadcast_keys'
+            )
         })
     },
     client: (_this, EWLogger) => {
-        _this.socket.on('set_broadcast_keys', async data => {
+        _this.http.response('client_broadcast_keys', async data => {
+            data = data.encryptedKeys
             EWLogger.log({
-                message: 'set_broadcast_keys',
+                message: 'client_broadcast_keys : set Broadcast Keys',
             })
+
             const decryptedBroadcastKeys = Encryption.decrypt(
-                data.encryptedBroadcastKeys,
+                data,
                 _this.keys.privateKey,
                 _this.do_encryption || true
             )
 
-            _this.broadcastKeys = decryptedBroadcastKeys
+            _this.broadcast_keys = decryptedBroadcastKeys
 
             EWLogger.log({
-                message: 'set_broadcast_keys',
+                message: 'client_broadcast_keys : did set Broadcast Keys',
                 decryptedBroadcastKeys,
             })
+            return true
         })
     },
 }
