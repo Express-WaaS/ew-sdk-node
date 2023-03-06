@@ -42,7 +42,7 @@ const send = async (_this, client_socket_id, keys, key_event_name) => {
     }
 }
 
-const receive = async (_this, key_event_name) => {
+const receive = async (_this, setter, key_event_name) => {
     _this.http.response(key_event_name, async data => {
         data = data.encryptedKeys
         KeySharerLogger.log({
@@ -59,7 +59,7 @@ const receive = async (_this, key_event_name) => {
             message: `${key_event_name} : did set`,
             decryptedKeys,
         })
-        return decryptedKeys
+        setter(decryptedKeys)
     })
 }
 

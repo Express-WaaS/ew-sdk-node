@@ -54,7 +54,10 @@ export default class EWServer {
             }
         }
 
-        this.topics = topicDetails
+        this.topics = topicDetails.reduce(
+            (acc, topic) => ({ ...acc, [topic.name]: topic }),
+            {}
+        )
 
         this.socket = new io(this.url, {
             query: {
@@ -75,7 +78,9 @@ export default class EWServer {
             },
         })
 
-        this.http = httpOverWs(this.socket)
+        this.http = httpOverWs(this.socket, this)
+        this.request = this.http.request()
+        this.response = this.http.response
 
         setupSocket.basic(this, EWLogger)
         setupSocket.server(this, EWLogger)
@@ -114,12 +119,72 @@ export default class EWServer {
         }
     }
 
-    async broadcast(data) {
-        data = Encryption.encrypt(
-            data,
-            this.broadcast_keys.publicKey,
-            this.do_encryption
+    async __send_event(
+        eventName,
+        publicKey,
+        topic,
+        data,
+        is_broadcast = false
+    ) {
+        try {
+            // check if topic exists
+            if (!is_broadcast && !this.topics[topic]) {
+                throw new Error(`topic ${topic} does not exist`)
+            }
+
+            // check if data is an object
+            if (typeof data !== 'object') {
+                throw new Error('data must be an object')
+            }
+
+            // check if data is empty
+            if (Object.keys(data).length === 0) {
+                throw new Error('data cannot be empty')
+            }
+
+            // encrypt data with topic keys
+            data = Encryption.encrypt(data, publicKey, this.do_encryption)
+
+            // publish data
+            this.socket.emit(eventName, {
+                topic,
+                data,
+            })
+        } catch (error) {
+            EWLogger.error({
+                message: 'error publishing',
+                error,
+            })
+        }
+    }
+
+    async publish(topic, data) {
+        await this.__send_event(
+            'publish',
+            this.topics[topic].keys.publicKey,
+            topic,
+            data
         )
-        await this.socket.emit('broadcast', data)
+    }
+
+    async broadcast(data) {
+        await this.__send_event(
+            'broadcast',
+            this.broadcast_keys.publicKey,
+            'broadcast',
+            data,
+            true
+        )
+    }
+
+    async getClientPublicKey(client_id) {
+        let pubClient
+        do {
+            pubClient = await _this.http.request()('client_public_key', {
+                id: client_id,
+            })
+            pubClient = JSON.parse(pubClient)
+        } while (!pubClient.publicKey)
+        return pubClient.publicKey
     }
 }

@@ -24,6 +24,13 @@ export default class EWClient {
 
         this.do_encryption = false
 
+        this.topics = []
+
+        this.broadcast_keys = {
+            publicKey: null,
+            privateKey: null,
+        }
+
         // encryption modes - AUTO, NONE, {publicKey, privateKey}
         if (encryption === 'NONE') {
             this.encryption = null
@@ -45,9 +52,24 @@ export default class EWClient {
      * @param {*} token
      * @param {*} token_type - ANONYMOUS, CLIENT
      * @param {*} ref - CLIENT | SERVER, null
+     * @param {*} topicDetails - list of topics which are available to the client
      * @returns
      */
-    async connect(token, token_type, ref) {
+    async connect(token, token_type, ref, topicDetails) {
+        if (topicDetails.length > 0) {
+            for (let i = 0; i < topicDetails.length; i++) {
+                topicDetails[i].keys = {
+                    publicKey: null,
+                    privateKey: null,
+                }
+            }
+        }
+
+        this.topics = topicDetails.reduce(
+            (acc, topic) => ({ ...acc, [topic.name]: topic }),
+            {}
+        )
+
         let query = {
             keys: JSON.stringify({ pub: this.keys.publicKey }),
         }
@@ -68,6 +90,8 @@ export default class EWClient {
         })
 
         this.http = httpOverWs(this.socket)
+        this.request = this.http.request()
+        this.response = this.http.response
 
         setupSocket.basic(this, EWLogger)
         setupSocket.client(this, EWLogger)
@@ -104,5 +128,35 @@ export default class EWClient {
                 })
             }
         }
+    }
+
+    async subscribe(topics) {
+        this.socket.emit('subscribe', topics)
+    }
+
+    async unsubscribe(topics) {
+        this.socket.emit('unsubscribe', topics)
+    }
+
+    async __on(__path, __callback, __key) {
+        this.socket.on(__path, __encryptedData => {
+            const __decryptedData = Encryption.decrypt(
+                __encryptedData.data,
+                !!__key
+                    ? __key()
+                    : this.topics[__encryptedData.meta.topic].privateKey,
+                this.do_encryption
+            )
+
+            __callback(__decryptedData)
+        })
+    }
+
+    async on(topic, callback) {
+        this.__on(`${topic}:update`, callback)
+    }
+
+    async onBroadcast(callback) {
+        this.__on('broadcast', callback, () => this.broadcast_keys.privateKey)
     }
 }

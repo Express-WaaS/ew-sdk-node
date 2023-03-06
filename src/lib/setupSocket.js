@@ -30,11 +30,49 @@ export default {
                 'client_broadcast_keys'
             )
         })
+
+        _this.socket.on('client_subscribe', async ({ client_id, topics }) => {
+            EWLogger.log({
+                message: 'client_subscribe',
+                client_id,
+                topics,
+            })
+
+            let key_set = []
+
+            for (let i = 0; i < topics.length; i++) {
+                const topic = _this.topics[topics[i]]
+                if (!topic) throw new Error('Topic not found')
+                key_set.push(topic)
+            }
+
+            key_set.forEach(topic => {
+                keySharingAlgorithm.send(
+                    _this,
+                    client_id,
+                    topic.keys,
+                    'key_share:topic:' + topic.name
+                )
+            })
+        })
     },
     client: (_this, EWLogger) => {
-        _this.broadcast_keys = keySharingAlgorithm.receive(
+        // for broadcast keys
+        keySharingAlgorithm.receive(
             _this,
+            _ => (_this.broadcast_keys = _),
             'client_broadcast_keys'
         )
+
+        // for topic keys
+        Object.keys(_this.topics).forEach(topic => {
+            keySharingAlgorithm.receive(
+                _this,
+                _ => (_this.topics[topic] = _),
+                'key_share:topic:' + topic
+            )
+        })
+
+        // add emitter for topics
     },
 }
