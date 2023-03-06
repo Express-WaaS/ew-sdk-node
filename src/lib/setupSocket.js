@@ -23,7 +23,7 @@ export default {
                 client_socket_id,
             })
 
-            keySharingAlgorithm(
+            keySharingAlgorithm.send(
                 _this,
                 client_socket_id,
                 _this.broadcast_keys,
@@ -32,25 +32,9 @@ export default {
         })
     },
     client: (_this, EWLogger) => {
-        _this.http.response('client_broadcast_keys', async data => {
-            data = data.encryptedKeys
-            EWLogger.log({
-                message: 'client_broadcast_keys : set Broadcast Keys',
-            })
-
-            const decryptedBroadcastKeys = Encryption.decrypt(
-                data,
-                _this.keys.privateKey,
-                _this.do_encryption || true
-            )
-
-            _this.broadcast_keys = decryptedBroadcastKeys
-
-            EWLogger.log({
-                message: 'client_broadcast_keys : did set Broadcast Keys',
-                decryptedBroadcastKeys,
-            })
-            return true
-        })
+        _this.broadcast_keys = keySharingAlgorithm.receive(
+            _this,
+            'client_broadcast_keys'
+        )
     },
 }

@@ -4,7 +4,7 @@ import logger from './logger.js'
 
 const KeySharerLogger = logger('KeySharer', chalk.magenta)
 
-export default async (_this, client_socket_id, keys, key_event_name) => {
+const send = async (_this, client_socket_id, keys, key_event_name) => {
     try {
         KeySharerLogger.log({
             message: `sending ${key_event_name} to client`,
@@ -40,4 +40,30 @@ export default async (_this, client_socket_id, keys, key_event_name) => {
             error: e,
         })
     }
+}
+
+const receive = async (_this, key_event_name) => {
+    _this.http.response(key_event_name, async data => {
+        data = data.encryptedKeys
+        KeySharerLogger.log({
+            message: `${key_event_name} : recieved`,
+        })
+
+        const decryptedKeys = Encryption.decrypt(
+            data,
+            _this.keys.privateKey,
+            _this.do_encryption || true
+        )
+
+        KeySharerLogger.log({
+            message: `${key_event_name} : did set`,
+            decryptedKeys,
+        })
+        return decryptedKeys
+    })
+}
+
+export default {
+    send,
+    receive,
 }
