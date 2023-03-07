@@ -13,7 +13,7 @@ export default class EWClient {
      *
      * @returns {EWServer}
      */
-    constructor({ namespace, encryption } = { namespace, encryption: 'NONE' }) {
+    constructor({ namespace } = { namespace }) {
         this.url = configs.ew_url + '/' + namespace
 
         this.socket = null
@@ -32,17 +32,18 @@ export default class EWClient {
         }
 
         // encryption modes - AUTO, NONE, {publicKey, privateKey}
-        if (encryption === 'NONE') {
-            this.encryption = null
-            this.keys = {
-                publicKey: null,
-                privateKey: null,
-            }
-        } else if (encryption === 'AUTO') {
-            this.keys = Encryption.generateKeyPair()
-        } else {
-            this.keys = encryption
-        }
+        // if (encryption === 'NONE') {
+        //     this.encryption = null
+        //     this.keys = {
+        //         publicKey: null,
+        //         privateKey: null,
+        //     }
+        // } else if (encryption === 'AUTO') {
+        //     this.keys = Encryption.generateKeyPair()
+        // } else {
+        //     this.keys = encryption
+        // }
+        this.keys = Encryption.generateKeyPair()
 
         return this
     }

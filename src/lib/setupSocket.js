@@ -14,6 +14,12 @@ export default {
             })
             _this.cloudSettings = data
         })
+
+        // error
+        _this.socket.on('connect_error', error => {
+            console.log(error)
+            process.exit(1)
+        })
     },
 
     server: (_this, EWLogger) => {
@@ -23,12 +29,13 @@ export default {
                 client_socket_id,
             })
 
-            keySharingAlgorithm.send(
-                _this,
-                client_socket_id,
-                _this.broadcast_keys,
-                'client_broadcast_keys'
-            )
+            if (_this.do_encryption)
+                keySharingAlgorithm.send(
+                    _this,
+                    client_socket_id,
+                    _this.broadcast_keys,
+                    'client_broadcast_keys'
+                )
         })
 
         _this.socket.on('client_subscribe', async ({ client_id, topics }) => {
@@ -46,14 +53,15 @@ export default {
                 key_set.push(topic)
             }
 
-            key_set.forEach(topic => {
-                keySharingAlgorithm.send(
-                    _this,
-                    client_id,
-                    topic.keys,
-                    'key_share:topic:' + topic.name
-                )
-            })
+            if (_this.do_encryption)
+                key_set.forEach(topic => {
+                    keySharingAlgorithm.send(
+                        _this,
+                        client_id,
+                        topic.keys,
+                        'key_share:topic:' + topic.name
+                    )
+                })
         })
     },
     client: (_this, EWLogger) => {
@@ -72,7 +80,5 @@ export default {
                 'key_share:topic:' + topic
             )
         })
-
-        // add emitter for topics
     },
 }
