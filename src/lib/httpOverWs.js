@@ -37,7 +37,7 @@ export default io => ({
                     reject(new Error('HttpOverWs: Request timeout'))
                 }, timeout)
 
-                io.onAny((event, ...data) => {
+                const __ = (event, ...data) => {
                     if (event.startsWith('response__')) {
                         const _parts = event.split('__')
                         const _path = _parts[1]
@@ -54,7 +54,9 @@ export default io => ({
                             resolve(...data)
                         }
                     }
-                })
+                }
+
+                io.offAny(__).onAny(__)
 
                 io.emit(eventName, ...params)
             })
@@ -63,7 +65,7 @@ export default io => ({
         if (!io && !io.connected)
             return new Error('HttpOverWs: No socket connection')
 
-        io.onAny(async (event, ...data) => {
+        const __ = async (event, ...data) => {
             if (event.startsWith('request__')) {
                 const _parts = event.split('__')
                 const _path = _parts[1]
@@ -90,6 +92,8 @@ export default io => ({
                     })
                 }
             }
-        })
+        }
+
+        io.offAny(__).onAny(__)
     },
 })
