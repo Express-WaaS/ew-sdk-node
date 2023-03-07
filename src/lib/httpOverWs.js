@@ -25,8 +25,6 @@ export default io => ({
                 eventName += '__no_auto'
             }
 
-            io.emit(eventName, ...params)
-
             HOWLogger.log({
                 type: 'Request Emited',
                 path,
@@ -57,6 +55,8 @@ export default io => ({
                         }
                     }
                 })
+
+                io.emit(eventName, ...params)
             })
         },
     response: (path, callback) => {

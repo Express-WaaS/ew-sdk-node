@@ -5,6 +5,7 @@ import httpOverWs from '../lib/httpOverWs.js'
 import logger from '../lib/logger.js'
 import chalk from 'chalk'
 import setupSocket from '../lib/setupSocket.js'
+import waitForConnection from '../lib/waitForConnection.js'
 
 const EWLogger = logger('EWServer', chalk.green)
 
@@ -56,7 +57,16 @@ export default class EWClient {
      * @param {*} topicDetails - list of topics which are available to the client
      * @returns
      */
-    async connect(token, token_type, ref, topicDetails) {
+    async connect({
+        token,
+        type: token_type,
+        ref,
+        topics: topicDetails,
+        query: customQueries = {},
+    }) {
+        if (typeof customQueries !== 'object')
+            throw new Error('query must be an object')
+
         if (topicDetails.length > 0) {
             for (let i = 0; i < topicDetails.length; i++) {
                 topicDetails[i].keys = {
@@ -84,11 +94,16 @@ export default class EWClient {
         }
 
         this.socket = new io(this.url, {
-            query,
+            query: {
+                ...query,
+                customQueries: JSON.stringify(customQueries),
+            },
             auth: {
                 token: `CLIENT ${token}`,
             },
         })
+
+        await waitForConnection(this.socket)
 
         this.http = httpOverWs(this.socket)
         this.request = this.http.request()
@@ -103,12 +118,11 @@ export default class EWClient {
     }
 
     async syncCloudSettings() {
+        EWLogger.log({
+            message: 'fetching cloud settings...',
+        })
         while (!this.cloudSettings) {
             try {
-                EWLogger.log({
-                    message: 'fetching cloud settings',
-                })
-
                 this.cloudSettings = await this.http.request()(
                     'cloud_settings__no_auto'
                 )
@@ -121,12 +135,10 @@ export default class EWClient {
                 })
             } catch (error) {
                 EWLogger.error({
-                    message: 'error fetching cloud settings',
+                    message: 'error fetching cloud settings, retrying in 5s',
                     error,
                 })
-                EWLogger.log({
-                    message: 'retrying...',
-                })
+                await new Promise(resolve => setTimeout(resolve, 5000))
             }
         }
     }

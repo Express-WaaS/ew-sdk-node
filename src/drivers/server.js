@@ -28,6 +28,8 @@ export default class EWServer {
 
         this.do_encryption = false
 
+        this.custom_auths_hooks = []
+
         // encryption modes - AUTO, NONE, {publicKey, privateKey}
         if (encryption === 'NONE') {
             this.encryption = null
@@ -117,6 +119,19 @@ export default class EWServer {
                 })
             }
         }
+    }
+
+    /**
+     * @callback customAuthHook
+     * @param {Object} data query, details, client_socket_id
+     * @returns {Object} {ok: boolean, message: string}
+     */
+    /**
+     *
+     * @param {customAuthHook} hook authenticator function
+     */
+    async customAuthentication(hook) {
+        this.custom_auths_hooks.push(hook)
     }
 
     async __send_event(

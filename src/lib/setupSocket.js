@@ -17,12 +17,55 @@ export default {
 
         // error
         _this.socket.on('connect_error', error => {
-            console.log(error)
+            console.log('SOCKET ERROR: ', error)
             process.exit(1)
         })
     },
 
     server: (_this, EWLogger) => {
+        _this.http.response(
+            'custom_authentication',
+            async (
+                __client_socket_id,
+                { query, client_socket_id, details }
+            ) => {
+                try {
+                    query = JSON.parse(query)
+                    EWLogger.log({
+                        message: 'custom_authentication',
+                        query,
+                        client_socket_id,
+                        details,
+                    })
+                    const res = await Promise.allSettled(
+                        _this.custom_auths_hooks.map(
+                            async hook =>
+                                await hook({ query, details, client_socket_id })
+                        )
+                    )
+                    for (let _res of res) {
+                        console.log('reSS:', _res)
+                        if (!_res.status === 'fulfilled')
+                            throw new Error(
+                                _res?.reason ?? 'Custom Authentication Failed'
+                            )
+                        _res = _res.value
+                        if (!_res.ok) throw new Error(_res.message)
+                    }
+                    return {
+                        ok: true,
+                        message: 'Auth OK',
+                    }
+                } catch (error) {
+                    console.log(error)
+                    return {
+                        ok: false,
+                        message: error.message,
+                    }
+                }
+            }
+        )
+
         _this.socket.on('new_client', async client_socket_id => {
             EWLogger.log({
                 message: 'New Client Connected!',
