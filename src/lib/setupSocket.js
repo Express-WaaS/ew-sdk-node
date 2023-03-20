@@ -80,6 +80,10 @@ export default {
                     )
                 })
         })
+
+        _this.socket.on('change_topic_encryption', ({ topic, new_value }) => {
+            _this.topics[topic].encryption = new_value
+        })
     },
     client: (_this, EWLogger) => {
         // handling auth error

@@ -53,6 +53,7 @@ export default class EWServer {
         if (topicDetails.length > 0) {
             for (let i = 0; i < topicDetails.length; i++) {
                 topicDetails[i].keys = Encryption.generateKeyPair()
+                topicDetails[i].encryption = false
             }
         }
 
@@ -104,6 +105,10 @@ export default class EWServer {
                 )
 
                 this.do_encryption = this.cloudSettings.options.encryption
+
+                for (const _keys in this.topics) {
+                    this.topics[_keys].encryption = this.do_encryption
+                }
 
                 EWLogger.log({
                     message: 'cloud settings fetched',
@@ -158,11 +163,16 @@ export default class EWServer {
             }
 
             // encrypt data with topic keys
-            data = Encryption.encrypt(data, publicKey, this.do_encryption)
+            data = Encryption.encrypt(
+                data,
+                publicKey,
+                this.topics[topic].encryption
+            )
 
             // publish data
             this.socket.emit(eventName, {
                 topic,
+                encrypted: this.topics[topic].encryption,
                 data,
             })
         } catch (error) {

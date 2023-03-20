@@ -158,7 +158,7 @@ export default class EWClient {
                 !!__key
                     ? __key()
                     : this.topics[__encryptedData.meta.topic].privateKey,
-                this.do_encryption
+                __encryptedData.meta.encrypted
             )
 
             __callback(__decryptedData)
