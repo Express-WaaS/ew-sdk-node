@@ -1,10 +1,10 @@
-import Encryption from './encryption.js'
+import configs from '../configs.js'
 import keySharingAlgorithm from './keySharingAlgorithm.js'
 
 export default {
     basic: (_this, EWLogger) => {
         _this.socket.onAny((event, ...data) => {
-            console.log('new event', event, data)
+            configs.log() && console.log('new event', event, data)
         })
 
         _this.socket.on('update_cloud_settings', data => {
@@ -82,10 +82,20 @@ export default {
         })
 
         _this.socket.on('change_topic_encryption', ({ topic, new_value }) => {
-            _this.topics[topic].encryption = new_value
+            if (Object.keys(_this.topics).indexOf(topic) == -1) {
+                _this.topics[topic] = { encryption: new_value }
+            } else _this.topics[topic].encryption = new_value
         })
+
+        // _this.socket.on('CLIENT_MSG', (data) => {
+
+        // })
+
+        setInterval(() => send_ping(_this.socket), configs.ping_interval)
     },
     client: (_this, EWLogger) => {
+        if (_this.type === 'CLIENT')
+            setInterval(() => send_ping(_this.socket), configs.ping_interval)
         // handling auth error
         _this.socket.on('auth_error', message => {
             EWLogger.error({
@@ -110,6 +120,12 @@ export default {
             )
         })
     },
+}
+
+async function send_ping(socket) {
+    socket.emit('ping:latency', {
+        startTime: new Date().toISOString(),
+    })
 }
 
 async function validator(_this, EWLogger, { query, client_socket_id }) {

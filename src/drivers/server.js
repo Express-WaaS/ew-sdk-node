@@ -13,7 +13,13 @@ export default class EWServer {
      *
      * @returns {EWServer}
      */
-    constructor({ encryption } = { encryption: 'NONE' }) {
+    constructor(
+        { encryption, log, serverLocation } = {
+            encryption: 'NONE',
+            log: false,
+            serverLocation: 'INDIA_CENTRAL',
+        }
+    ) {
         this.url = configs.ew_url
 
         this.socket = null
@@ -29,6 +35,20 @@ export default class EWServer {
         this.do_encryption = false
 
         this.custom_auths_hooks = []
+
+        this.serverLocation =
+            Object.keys(configs.servers).indexOf(serverLocation) > -1
+                ? serverLocation
+                : 'INDIA-CENTRAL'
+
+        // configs.servers[this.serverLocation]
+        this.url = configs.servers[this.serverLocation]
+
+        // console.log(this.url)
+
+        if (!log) {
+            process.env.EW_LOG = false
+        }
 
         // encryption modes - AUTO, NONE, {publicKey, privateKey}
         if (encryption === 'NONE') {
@@ -90,6 +110,13 @@ export default class EWServer {
 
         await this.syncCloudSettings()
 
+        this.socket.on('reconnect', async () => {
+            EWLogger.log({
+                message: 'reconnected to server',
+            })
+            await this.connect(token, topicDetails)
+        })
+
         return this
     }
 
@@ -139,6 +166,18 @@ export default class EWServer {
         this.custom_auths_hooks.push(hook)
     }
 
+    async on_client_msg(__callback) {
+        this.socket.on('CLIENT_MSG', __encryptedData => {
+            const __decryptedData = Encryption.decrypt(
+                __encryptedData.data,
+                this.keys.privateKey,
+                __encryptedData.encrypted
+            )
+
+            __callback(__decryptedData)
+        })
+    }
+
     async __send_event(
         eventName,
         publicKey,
@@ -184,6 +223,8 @@ export default class EWServer {
     }
 
     async publish(topic, data) {
+        if (Object.keys(this.topics).indexOf(topic) < 0)
+            throw new Error('EWServer: topic not found in directory')
         await this.__send_event(
             'publish',
             this.topics[topic].keys.publicKey,

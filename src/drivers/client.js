@@ -14,7 +14,13 @@ export default class EWClient {
      *
      * @returns {EWServer}
      */
-    constructor({ namespace } = { namespace }) {
+    constructor(
+        { namespace, log, serverLocation } = {
+            namespace,
+            log: false,
+            serverLocation: 'INDIA-CENTRAL',
+        }
+    ) {
         this.url = configs.ew_url + '/' + namespace
 
         this.socket = null
@@ -27,9 +33,25 @@ export default class EWClient {
 
         this.topics = []
 
+        this.type = ''
+
         this.broadcast_keys = {
             publicKey: null,
             privateKey: null,
+        }
+
+        this.serverLocation =
+            Object.keys(configs.servers).indexOf(serverLocation) > -1
+                ? serverLocation
+                : 'INDIA_CENTRAL'
+
+        // configs.servers[this.serverLocation]
+        this.url = configs.servers[this.serverLocation] + '/' + namespace
+
+        // console.log(this.url)
+
+        if (!log) {
+            process.env.EW_LOG = false
         }
 
         // encryption modes - AUTO, NONE, {publicKey, privateKey}
@@ -92,6 +114,8 @@ export default class EWClient {
         } else {
             query.type = 'CLIENT'
         }
+
+        this.type = query.type
 
         this.socket = new io(this.url, {
             query: {
@@ -171,5 +195,41 @@ export default class EWClient {
 
     async onBroadcast(callback) {
         this.__on('broadcast', callback, () => this.broadcast_keys.privateKey)
+    }
+
+    async send(data) {
+        try {
+            // check if data is an object
+            if (typeof data !== 'object') {
+                throw new Error('data must be an object')
+            }
+
+            // check if data is empty
+            if (Object.keys(data).length === 0) {
+                throw new Error('data cannot be empty')
+            }
+
+            const server_key_details = JSON.parse(
+                await this.http.request()('server_public_key__no_auto')
+            )
+
+            // encrypt data with topic keys
+            data = Encryption.encrypt(
+                data,
+                server_key_details.publicKey,
+                server_key_details.encryption
+            )
+
+            // publish data
+            this.socket.emit('CLIENT_MSG', {
+                encrypted: server_key_details.encryption,
+                data,
+            })
+        } catch (error) {
+            EWLogger.error({
+                message: 'error publishing',
+                error,
+            })
+        }
     }
 }
